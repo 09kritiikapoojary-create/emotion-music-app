@@ -9,7 +9,7 @@
 
 <body>
 
-<a href="/logout" class="logout-btn">Logout</a>
+<a href="/logout" class="logout-btn" onclick="stopCamera()">Logout</a> 
 
 <h1 align="center">Mood Music Recommender</h1>
 
@@ -35,13 +35,23 @@
 <script>
 
 const video = document.getElementById('video');
+let currentStream = null;
 
 // Open browser camera
 navigator.mediaDevices.getUserMedia({ video: true })
   .then(stream => {
     video.srcObject = stream;
+    currentStream = stream;
   });
 
+// 🔥 Stop camera when logout is clicked
+function stopCamera() {
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+    }
+}
+
+// Emotion detection + song update
 async function detectAndUpdate() {
 
   const canvas = document.getElementById('canvas');
@@ -56,7 +66,6 @@ async function detectAndUpdate() {
 
   try {
 
-    // 1️⃣ Detect emotion
     const emotionResponse = await fetch('/detect_emotion', {
       method: 'POST',
       body: JSON.stringify({ image: imageData }),
@@ -66,7 +75,6 @@ async function detectAndUpdate() {
     const emotionData = await emotionResponse.json();
     console.log("Detected:", emotionData.emotion);
 
-    // 2️⃣ Immediately load songs AFTER emotion update
     const songsResponse = await fetch('/t');
     const songs = await songsResponse.json();
 
@@ -91,11 +99,10 @@ async function detectAndUpdate() {
   }
 }
 
-// Run every 3 seconds (more stable)
-setInterval(detectAndUpdate, 3000);
+// Run every 5 seconds (better stability on Render)
+setInterval(detectAndUpdate, 5000);
 
 </script>
-
 </body>
 </html>
 

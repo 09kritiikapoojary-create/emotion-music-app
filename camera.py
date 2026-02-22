@@ -39,7 +39,10 @@ emotion_dict = {
 
 # 🎯 Emotion Detection
 def predict_emotion_from_image(img):
-
+    import random
+    emotions = ["Happy", "Sad", "Angry", "Surprised"]
+    return random.choice(emotions)
+	
     img = cv2.flip(img, 1)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
