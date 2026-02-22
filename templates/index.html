@@ -42,8 +42,7 @@ navigator.mediaDevices.getUserMedia({ video: true })
     video.srcObject = stream;
   });
 
-// 🔥 AUTO EMOTION DETECTION FUNCTION
-function detectEmotionAuto() {
+async function detectAndUpdate() {
 
   const canvas = document.getElementById('canvas');
   const context = canvas.getContext('2d');
@@ -55,24 +54,21 @@ function detectEmotionAuto() {
 
   const imageData = canvas.toDataURL('image/jpeg');
 
-  fetch('/detect_emotion', {
-    method: 'POST',
-    body: JSON.stringify({ image: imageData }),
-    headers: { 'Content-Type': 'application/json' }
-  })
-  .then(response => response.json())
-  .then(data => {
-      console.log("Detected:", data.emotion);
-  });
-}
+  try {
 
-// 🔥 Run emotion detection every 2 seconds
-setInterval(detectEmotionAuto, 2000);
+    // 1️⃣ Detect emotion
+    const emotionResponse = await fetch('/detect_emotion', {
+      method: 'POST',
+      body: JSON.stringify({ image: imageData }),
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-// 🔥 Update table every 2 seconds
-setInterval(function () {
+    const emotionData = await emotionResponse.json();
+    console.log("Detected:", emotionData.emotion);
 
-  $.getJSON('/t', function (data) {
+    // 2️⃣ Immediately load songs AFTER emotion update
+    const songsResponse = await fetch('/t');
+    const songs = await songsResponse.json();
 
     $("#ResultArea").html("");
 
@@ -83,16 +79,20 @@ setInterval(function () {
     $("<td>Album</td>").appendTo(rowHeader);
     $("<td>Artist</td>").appendTo(rowHeader);
 
-    $.each(data, function (i, value) {
+    $.each(songs, function (i, value) {
       var row = $("<tr></tr>").appendTo(table);
       $("<td></td>").text(value.Name).appendTo(row);
       $("<td></td>").text(value.Album).appendTo(row);
       $("<td></td>").text(value.Artist).appendTo(row);
     });
 
-  });
+  } catch (error) {
+    console.log("Error:", error);
+  }
+}
 
-}, 2000);
+// Run every 3 seconds (more stable)
+setInterval(detectAndUpdate, 3000);
 
 </script>
 
