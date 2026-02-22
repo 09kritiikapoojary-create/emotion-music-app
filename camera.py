@@ -86,11 +86,14 @@ def predict_emotion_from_image(img):
 
     return emotion_label
 
+def music_rec(emotion):
+    emotion = emotion.lower()
 
-def music_rec():
-    df = pd.read_csv(music_dist[show_text[0]])
-    df = df[['Name','Album','Artist']]
-    df = df.head(15)
-    return df
+    try:
+        df = pd.read_csv(f"songs/{emotion}.csv")
+    except:
+        df = pd.read_csv("songs/neutral.csv")
+
+    return df.sample(10)
 	
 	

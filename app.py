@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, f
 import base64
 import numpy as np
 import cv2
+import os
 from camera import predict_emotion_from_image, music_rec
 
 # AUTH
@@ -30,18 +31,22 @@ class User(db.Model, UserMixin):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# INITIAL SONGS
-df1 = music_rec()
+
+# INITIAL SONGS (default neutral)
+df1 = music_rec("neutral")
+
 
 @app.route('/')
 @login_required
 def index():
     return render_template('index.html')
 
+
 @app.route('/t')
 @login_required
 def gen_table():
     return df1.to_json(orient='records')
+
 
 @app.route('/detect_emotion', methods=['POST'])
 @login_required
@@ -55,14 +60,17 @@ def detect_emotion():
     np_arr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
+    # Detect emotion
     emotion = predict_emotion_from_image(img)
 
-    print("Detected Emotion:", emotion)  # Debug output
+    print("Detected Emotion:", emotion)
 
+    # Update songs based on emotion
     global df1
-    df1 = music_rec()
+    df1 = music_rec(emotion)
 
     return jsonify({'emotion': emotion})
+
 
 # LOGIN
 @app.route('/login', methods=["GET", "POST"])
@@ -80,6 +88,7 @@ def login():
             flash("Invalid credentials")
 
     return render_template("login.html")
+
 
 # REGISTER
 @app.route('/register', methods=["GET", "POST"])
@@ -104,6 +113,7 @@ def register():
 
     return render_template("register.html")
 
+
 # RESET PASSWORD
 @app.route('/reset_password', methods=["GET", "POST"])
 def reset_password():
@@ -124,6 +134,7 @@ def reset_password():
 
     return render_template("reset_password.html")
 
+
 # LOGOUT
 @app.route('/logout')
 @login_required
@@ -131,8 +142,11 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+
+# CREATE DB TABLES ON STARTUP
 with app.app_context():
     db.create_all()
+
 
 if __name__ == '__main__':
     app.run()
