@@ -4,10 +4,12 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 import pandas as pd
 
-# Load face detector
-face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+# ✅ FIXED Face Cascade for Render
+face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
 
-# Build model architecture
+# Build model
 emotion_model = Sequential()
 emotion_model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(48,48,1)))
 emotion_model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
@@ -23,7 +25,6 @@ emotion_model.add(Dense(1024, activation='relu'))
 emotion_model.add(Dropout(0.5))
 emotion_model.add(Dense(7, activation='softmax'))
 
-# Load trained weights
 emotion_model.load_weights('model.h5')
 
 emotion_dict = {
@@ -36,64 +37,54 @@ emotion_dict = {
     6:"Surprised"
 }
 
-music_dist = {
-    0:"songs/angry.csv",
-    1:"songs/disgusted.csv",
-    2:"songs/fearful.csv",
-    3:"songs/happy.csv",
-    4:"songs/neutral.csv",
-    5:"songs/sad.csv",
-    6:"songs/surprised.csv"
-}
-
-show_text = [0]
-
+# 🎯 Emotion Detection
 def predict_emotion_from_image(img):
 
-    global show_text
-
-    # Flip image (browser camera mirror fix)
     img = cv2.flip(img, 1)
-
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    face_rects = face_cascade.detectMultiScale(
+    faces = face_cascade.detectMultiScale(
         gray,
         scaleFactor=1.1,
         minNeighbors=5,
         minSize=(40, 40)
     )
 
-    emotion_label = "No Face Detected"
+    if len(faces) == 0:
+        return "Neutral"
 
-    for (x, y, w, h) in face_rects:
+    for (x, y, w, h) in faces:
+        roi = gray[y:y+h, x:x+w]
+        roi = cv2.resize(roi, (48, 48))
+        roi = roi.astype("float32") / 255.0
+        roi = np.reshape(roi, (1, 48, 48, 1))
 
-        roi_gray = gray[y:y + h, x:x + w]
-
-        roi_gray = cv2.resize(roi_gray, (48, 48))
-
-        # Normalize properly
-        roi_gray = roi_gray.astype("float32") / 255.0
-
-        roi_gray = np.reshape(roi_gray, (1, 48, 48, 1))
-
-        prediction = emotion_model.predict(roi_gray, verbose=0)
-
+        prediction = emotion_model.predict(roi, verbose=0)
         maxindex = int(np.argmax(prediction))
 
-        show_text[0] = maxindex
-        emotion_label = emotion_dict[maxindex]
+        return emotion_dict[maxindex]
 
-    return emotion_label
+    return "Neutral"
 
+
+# 🎵 Music Recommendation
 def music_rec(emotion):
-    emotion = emotion.lower()
+
+    emotion = emotion.strip().lower()
+
+    valid = ["angry","disgusted","fearful","happy","neutral","sad","surprised"]
+
+    if emotion not in valid:
+        emotion = "neutral"
 
     try:
         df = pd.read_csv(f"songs/{emotion}.csv")
     except:
         df = pd.read_csv("songs/neutral.csv")
 
-    return df.sample(10)
-	
-	
+    if len(df) >= 10:
+        return df.sample(10)
+    else:
+        return df
+		
+		

@@ -2,10 +2,8 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for, f
 import base64
 import numpy as np
 import cv2
-import os
 from camera import predict_emotion_from_image, music_rec
 
-# AUTH
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 from flask_bcrypt import Bcrypt
@@ -20,7 +18,7 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# USER MODEL
+# 👤 User Model
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
@@ -32,7 +30,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-# INITIAL SONGS (default neutral)
+# 🎵 Default Songs
 df1 = music_rec("neutral")
 
 
@@ -60,19 +58,17 @@ def detect_emotion():
     np_arr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    # Detect emotion
     emotion = predict_emotion_from_image(img)
 
     print("Detected Emotion:", emotion)
 
-    # Update songs based on emotion
     global df1
     df1 = music_rec(emotion)
 
     return jsonify({'emotion': emotion})
 
 
-# LOGIN
+# 🔐 Login
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -90,7 +86,7 @@ def login():
     return render_template("login.html")
 
 
-# REGISTER
+# 📝 Register
 @app.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -114,7 +110,7 @@ def register():
     return render_template("register.html")
 
 
-# RESET PASSWORD
+# 🔄 Reset Password
 @app.route('/reset_password', methods=["GET", "POST"])
 def reset_password():
     if request.method == "POST":
@@ -135,7 +131,7 @@ def reset_password():
     return render_template("reset_password.html")
 
 
-# LOGOUT
+# 🚪 Logout
 @app.route('/logout')
 @login_required
 def logout():
@@ -143,7 +139,7 @@ def logout():
     return redirect(url_for('login'))
 
 
-# CREATE DB TABLES ON STARTUP
+# 🗄 Create DB Tables
 with app.app_context():
     db.create_all()
 
